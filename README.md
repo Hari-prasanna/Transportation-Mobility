@@ -89,9 +89,10 @@ CREATE TABLE monthly_target_trips (
 
 ## Business Problems and Solutions
 
+### 1. City-Level Fare and Trip Summary Report
+
 **Objective:** Generate a report that displays the total trips, average fare per km, average fare per trip, and the percentage contribution of each city's trips to the overall trips. This report will help in assessing trip volume, pricing efficiency, and each city's contribution to the overall trip count
 
-### 1. City-Level Fare and Trip Summary Report
 
 ```sql
 SELECT
@@ -107,13 +108,15 @@ GROUP BY dc.city_name
 ORDER BY total_trips DESC;
 ```
 
+**### Business Request - 2: Monthly City-Level Trips Target Performance Report**
+
 **Objective:** Generate a report that evaluates the target performance for trips at the monthly and city level. For each city and month, compare the actual total trips with the target trips and categorise the performance as follows:
 e If actual trips are greater than target trips, mark it as "Above Target".
  	If actual trips are less than or equal to target trips, mark it as "Below Target".
 Additionally, calculate the % difference between actual and target trips to quantify the performance gap.
 
 
-### Business Request - 2: Monthly City-Level Trips Target Performance Report
+
 
 ```sql
 WITH city_month AS (
@@ -148,251 +151,171 @@ GROUP BY cm.city_name, cm.month
 ORDER BY cm.city_name, cm.month;
 ```
 
-**Objective:** User Interest and Trends Analysis
 
-### 3. What are the top 10 most popular genres on Netflix based on the count of titles added in each genre?
+
+### Business Request - 3: City-Level Repeat Passenger Trip Frequency Report
+
+**Objective:** 
+Generate a report that shows the percentage distribution of repeat passengers by the number of trips they have taken in each city. Calculate the percentage of repeat passengers who took 2 trips, 3 trips, and so on, up to 10 trips.
+Each column should represent a trip count category, displaying the percentage of repeat passengers who fall into that category out of the total repeat passengers for that city.
+This report will help identify cities with high repeat trip frequency, which can indicate strong customer loyalty or frequent usage patterns.
+
 
 ```sql
-SELECT 
-    UNNEST(STRING_TO_ARRAY(listed_in,',')) AS genre,
-    COUNT(*) AS content,
-    ROUND(COUNt(*)::NUMERIC / (SELECT COUNT(*) FROM netflix)::NUMERIC * 100,2) AS Average_content_Per_genre
-FROM netflix
-GROUP BY 1
-ORDER BY 2 DESC
-LIMIT 10;
-
-```
-
-**Objective:** Content Release Timing and Trends
-
-### 4. During which month(s) of the year does Netflix release the most content, and how has this trend changed over the years?
-
-```sql
-WITH monthly_count AS 
-    (SELECT  
-    EXTRACT(YEAR FROM TO_DATE(date_added,'Month DD, Year')) AS release_year,
-    EXTRACT(MONTH FROM TO_DATE(date_added,'Month DD, Year')) AS release_Months,
-    COUNT(*) AS content
-FROM netflix
-GROUP BY 1,2
---HAVING COUNT(*) > 100
-ORDER BY 2,3 DESC) 
-
-
- SELECT * 
- FROM       
-    (SELECT release_year, release_Months, content, 
-            ROW_NUMBER() OVER(PARTITION BY release_year ORDER BY content DESC) AS most_content
-    FROM monthly_count)
-WHERE most_content = 1 AND release_year IS NOT NULL
-ORDER BY content DESC;
-```
-
-**Objective:** Top Directors by Genre
-
-### 5. Who are the top 5 most prolific directors in each genre?
-
-```sql
-WITH gen_dic AS (SELECT 
-    UNNEST(STRING_TO_ARRAY(listed_in,',')) AS genre,
-    UNNEST(STRING_TO_ARRAY(director,',')) AS director,
-    COUNT(show_id) AS content
-FROM netflix
-GROUP BY 1,2)
-
- SELECT *       
-FROM        
-    (SELECT *, 
-        ROW_NUMBER() OVER(PARTITION BY genre ORDER BY content DESC) AS top
-    FROM gen_dic
-    WHERE director IS NOT NULL AND genre IS NOT NULL)
-WHERE top <= 5 
-```
-
-**Objective:** Find the movie with the longest duration.
-
-### 6. Find Content Added in the Last 5 Years
-
-```sql
-SELECT *
-FROM netflix
-WHERE TO_DATE(date_added, 'Month DD, YYYY') >= CURRENT_DATE - INTERVAL '5 years';
-```
-
-**Objective:** Audience Suitability Trends
-
-### 7. How has the distribution of content ratings (e.g., PG, R, TV-MA) changed over the years?
-
-```sql
-WITH trends AS (SELECT
-     rating,
-     EXTRACT(YEAR FROM TO_DATE(date_added,'Month DD, Year')) AS release_year,
-     COUNT(*)
-FROM netflix
-WHERE rating IN ('PG', 'R', 'TV-MA') AND date_added IS NOT NULL
-GROUP BY 1, 2),
-
-overall AS 
-(SELECT EXTRACT(YEAR FROM TO_DATE(date_added, 'Month DD,Year')) AS release_year,
-    COUNT(*) AS total_content
-FROM netflix
-WHERE date_added IS NOT NULL
-GROUP BY 1)
-
-SELECT 
-    t.release_year, 
-    t.rating,
-    t.count, 
-    o.total_content, 
-    ROUND(t.count::NUMERIC/o.total_content::NUMERIC * 100,2) AS percentage
-FROM trends AS t
-JOIN overall AS o ON t.release_year = o.release_year
-GROUP BY 1,2,3,4
-ORDER BY 2,1;
-```
-
-**Objective:** List all content directed by 'Rajiv Chilaka'.
-
-### 8. List All TV Shows with More Than 5 Seasons
-
-```sql
-SELECT *
-FROM netflix
-WHERE type = 'TV Show'
-  AND SPLIT_PART(duration, ' ', 1)::INT > 5;
-```
-
-**Objective:** International Content Growth
-
-### 9. Which countries have seen the highest growth in Netflix content over the years?
-
-```sql
-WITH content AS (
+WITH trip_count AS (
     SELECT 
-        EXTRACT(YEAR FROM TO_DATE(date_added, 'Month DD, YYYY')) AS release_year,
-        TRIM(UNNEST(STRING_TO_ARRAY(country, ','))) AS countries,
-        COUNT(*) AS total_content
-    FROM netflix
-    WHERE date_added IS NOT NULL
-    GROUP BY 1, 2
+        dc.city_name,
+        td.city_id,
+        SUM(CASE WHEN td.trip_count = '2-Trips' THEN td.repeat_passenger_count ELSE 0 END) AS trips_2,
+        SUM(CASE WHEN td.trip_count = '3-Trips' THEN td.repeat_passenger_count ELSE 0 END) AS trips_3,
+        SUM(CASE WHEN td.trip_count = '4-Trips' THEN td.repeat_passenger_count ELSE 0 END) AS trips_4,
+        SUM(CASE WHEN td.trip_count = '5-Trips' THEN td.repeat_passenger_count ELSE 0 END) AS trips_5,
+        SUM(CASE WHEN td.trip_count = '6-Trips' THEN td.repeat_passenger_count ELSE 0 END) AS trips_6,
+        SUM(CASE WHEN td.trip_count = '7-Trips' THEN td.repeat_passenger_count ELSE 0 END) AS trips_7,
+        SUM(CASE WHEN td.trip_count = '8-Trips' THEN td.repeat_passenger_count ELSE 0 END) AS trips_8,
+        SUM(CASE WHEN td.trip_count = '9-Trips' THEN td.repeat_passenger_count ELSE 0 END) AS trips_9,
+        SUM(CASE WHEN td.trip_count = '10-Trips'THEN td.repeat_passenger_count ELSE 0 END) AS trips_10
+    FROM dim_repeat_trip_distribution AS td
+    JOIN dim_city AS dc
+        ON td.city_id = dc.city_id
+    GROUP BY dc.city_name, td.city_id
+),
+total_passenger_count AS (
+    SELECT 
+        city_id,
+        SUM(repeat_passenger_count) AS total_passengers
+    FROM dim_repeat_trip_distribution
+    GROUP BY city_id
 )
+SELECT
+    t.city_name,
+    ROUND(SUM(t.trips_2) / NULLIF(SUM(tp.total_passengers), 0) * 100, 2) AS trips_2,
+    ROUND(SUM(t.trips_3) / NULLIF(SUM(tp.total_passengers), 0) * 100, 2) AS trips_3,
+    ROUND(SUM(t.trips_4) / NULLIF(SUM(tp.total_passengers), 0) * 100, 2) AS trips_4,
+    ROUND(SUM(t.trips_5) / NULLIF(SUM(tp.total_passengers), 0) * 100, 2) AS trips_5,
+    ROUND(SUM(t.trips_6) / NULLIF(SUM(tp.total_passengers), 0) * 100, 2) AS trips_6,
+    ROUND(SUM(t.trips_7) / NULLIF(SUM(tp.total_passengers), 0) * 100, 2) AS trips_7,
+    ROUND(SUM(t.trips_8) / NULLIF(SUM(tp.total_passengers), 0) * 100, 2) AS trips_8,
+    ROUND(SUM(t.trips_9) / NULLIF(SUM(tp.total_passengers), 0) * 100, 2) AS trips_9,
+    ROUND(SUM(t.trips_10)/ NULLIF(SUM(tp.total_passengers), 0) * 100, 2) AS trips_10
+FROM trip_count AS t
+JOIN total_passenger_count AS tp
+    ON t.city_id = tp.city_id
+GROUP BY t.city_name;
 
-SELECT 
-    release_year,
-    countries,
-    total_content,
-    LAG(total_content) OVER (PARTITION BY countries ORDER BY release_year) AS previous_year_content,
-    ROUND(
-        (total_content::NUMERIC - LAG(total_content) OVER (PARTITION BY countries ORDER BY release_year)) 
-        / NULLIF(LAG(total_content) OVER (PARTITION BY countries ORDER BY release_year), 0) * 100, 
-        2
-    ) AS growth_percentage
-FROM 
-    content
-WHERE 
-    release_year > 2018
-    AND countries IN ('France', 'Germany', 'India', 'Japan', 'Russia', 'South Korea')
-ORDER BY 
-    countries, release_year;
 ```
 
-**Objective:** Count the number of content items in each genre.
+### Business Request - 4: Identify Cities with Highest and Lowest Total New Passengers
 
-### 10.Find each year and the average numbers of content release in India on netflix. 
-return top 5 year with highest avg content release!
-
-```sql
-SELECT 
-    country,
-    release_year,
-    COUNT(show_id) AS total_release,
-    ROUND(
-        COUNT(show_id)::numeric /
-        (SELECT COUNT(show_id) FROM netflix WHERE country = 'India')::numeric * 100, 2
-    ) AS avg_release
-FROM netflix
-WHERE country = 'India'
-GROUP BY country, release_year
-ORDER BY avg_release DESC
-LIMIT 5;
-```
-
-**Objective:** Calculate and rank years by the average number of content releases by India.
-
-### 11. List All Movies that are Documentaries
+**Objective:** 
+Generate a report that calculates the total new passengers for each city and ranks them based on this value. Identify the top 3 cities with the highest number of new passengers as well as the bottom 3 cities with the lowest number of new passengers, categorising them as "Top 3" or "Bottom 3" accordingly.
 
 ```sql
-SELECT * 
-FROM netflix
-WHERE listed_in LIKE '%Documentaries';
-```
-
-**Objective:** Retrieve all movies classified as documentaries.
-
-### 12. Find All Content Without a Director
-
-```sql
-SELECT * 
-FROM netflix
-WHERE director IS NULL;
-```
-
-**Objective:** List content that does not have a director.
-
-### 13. Find How Many Movies Actor 'Salman Khan' Appeared in the Last 10 Years
-
-```sql
-SELECT * 
-FROM netflix
-WHERE casts LIKE '%Salman Khan%'
-  AND release_year > EXTRACT(YEAR FROM CURRENT_DATE) - 10;
-```
-
-**Objective:** Count the number of movies featuring 'Salman Khan' in the last 10 years.
-
-### 14. Find the Top 10 Actors Who Have Appeared in the Highest Number of Movies Produced in India
-
-```sql
-SELECT 
-    UNNEST(STRING_TO_ARRAY(casts, ',')) AS actor,
-    COUNT(*)
-FROM netflix
-WHERE country = 'India'
-GROUP BY actor
-ORDER BY COUNT(*) DESC
-LIMIT 10;
-```
-
-**Objective:** Identify the top 10 actors with the most appearances in Indian-produced movies.
-
-### 15. Categorize Content Based on the Presence of 'Kill' and 'Violence' Keywords
-
-```sql
-SELECT 
-    category,
-    COUNT(*) AS content_count
-FROM (
+WITH city_level AS (
     SELECT 
-        CASE 
-            WHEN description ILIKE '%kill%' OR description ILIKE '%violence%' THEN 'Bad'
-            ELSE 'Good'
-        END AS category
-    FROM netflix
-) AS categorized_content
-GROUP BY category;
+        dc.city_name,
+        SUM(fs.new_passengers) AS total_new_passengers,
+        rank () OVER (ORDER BY SUM(fs.new_passengers) DESC) AS rank
+FROM fact_passenger_summary AS fs 
+JOIN dim_city AS dc
+    ON fs.city_id = dc.city_id
+GROUP BY dc.city_name)
+
+
+SELECT
+    city_name,
+    total_new_passengers,
+    city_category
+FROM
+(SELECT
+     *,
+     CASE 
+         WHEN rank BETWEEN 1 AND 3 THEN 'Top 3'
+         WHEN rank BETWEEN 8 AND 10 THEN 'Bottom 3'
+         ELSE 'Middle'
+     END AS city_category
+FROM city_level) AS rank
+WHERE city_category = 'Top 3' OR city_category = 'Bottom 3'
 ```
 
-**Objective:** Categorize content as 'Bad' if it contains 'kill' or 'violence' and 'Good' otherwise. Count the number of items in each category.
+### Business Request - 5: Identify Month with Highest Revenue for Each City
 
-## Findings and Conclusion
+**Objective:** 
+Generate a report that identifies the month with the highest revenue for each city. For each city, display the month_name, the revenue amount for that month, and the percentage contribution of that month's revenue to the city's total revenue.
 
-- **Content Distribution:** The dataset contains a diverse range of movies and TV shows with varying ratings and genres.
-- **Common Ratings:** Insights into the most common ratings provide an understanding of the content's target audience.
-- **Geographical Insights:** The top countries and the average content releases by India highlight regional content distribution.
-- **Content Categorization:** Categorizing content based on specific keywords helps in understanding the nature of content available on Netflix.
+```sql
+WITH revenue AS (
+    SELECT 
+        dc.city_name,
+        TO_CHAR(DATE_TRUNC('month', ft.trip_date), 'FMMonth') AS month,
+        SUM(ft.fare_amount) AS revenue,
+        RANK() OVER (PARTITION BY dc.city_name ORDER BY SUM(ft.fare_amount) DESC) AS revenue_rank
+    FROM fact_trips AS ft
+    JOIN dim_city AS dc
+        ON ft.city_id = dc.city_id
+    GROUP BY dc.city_name, DATE_TRUNC('month', ft.trip_date)
+),
+city_total AS (
+    SELECT 
+        dc.city_name,
+        SUM(ft.fare_amount) AS total_fare_by_city
+    FROM fact_trips AS ft
+    JOIN dim_city AS dc
+        ON ft.city_id = dc.city_id
+    GROUP BY dc.city_name
+)
+SELECT 
+    r.city_name,
+    r.month AS highest_revenue_month,
+    r.revenue,
+    ROUND(r.revenue / ct.total_fare_by_city * 100, 2) AS percentage_contribution
+FROM revenue AS r
+JOIN city_total AS ct
+    ON r.city_name = ct.city_name
+WHERE r.revenue_rank = 1
+ORDER BY r.city_name;
+```
 
-This analysis provides a comprehensive view of Netflix's content and can help inform content strategy and decision-making.
+
+Business Request - 6: Repeat Passenger Rate Analysis
+
+**Objective:** 
+Generate a report that calculates two metrics:
+1.	Monthly Repeat Passenger Rate: Calculate the repeat passenger rate for each city and month by comparing the number of repeat passengers to the total passengers.
+2.	City-wide Repeat Passenger Rate: Calculate the overall repeat passenger rate for each city, considering all passengers across months.
+These metrics will provide insights into monthly repeat trends as well as the overall repeat behaviour for each city.
 
 
+```sql
+WITH passenger_summary AS (
+    SELECT 
+        dc.city_name,
+        DATE_TRUNC('month', ft.trip_date) AS month,
+        COUNT(*) AS total_passengers,
+        SUM(CASE WHEN ft.passenger_type = 'repeated' THEN 1 ELSE 0 END) AS repeat_passengers
+    FROM fact_trips AS ft
+    JOIN dim_city AS dc
+        ON ft.city_id = dc.city_id
+    GROUP BY 1, 2
+),
+city_summary AS (
+    SELECT 
+        city_name,
+        SUM(total_passengers) AS total_city_passengers,
+        SUM(repeat_passengers) AS total_repeat_passengers
+    FROM passenger_summary
+    GROUP BY 1
+)
+SELECT 
+    ps.city_name,
+    TO_CHAR(ps.month, 'Month') AS month,
+    ps.total_passengers,
+    ps.repeat_passengers,
+    ROUND((ps.repeat_passengers::NUMERIC / ps.total_passengers) * 100, 2) AS monthly_repeat_passenger_rate,
+    ROUND((cs.total_repeat_passengers::NUMERIC / cs.total_city_passengers) * 100, 2) AS city_repeat_passenger_rate
+FROM passenger_summary AS ps
+JOIN city_summary AS cs
+    ON ps.city_name = cs.city_name
+ORDER BY ps.city_name, ps.month;
+```
 
