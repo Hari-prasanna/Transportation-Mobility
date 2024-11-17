@@ -91,7 +91,9 @@ CREATE TABLE monthly_target_trips (
 
 ### 1. City-Level Fare and Trip Summary Report
 
-**Objective:** Generate a report that displays the total trips, average fare per km, average fare per trip, and the percentage contribution of each city's trips to the overall trips. This report will help in assessing trip volume, pricing efficiency, and each city's contribution to the overall trip count
+**Objective:** Generate a report that displays the total trips, average fare per km, average fare per trip, and the percentage contribution of each city's trips to the overall trips. 
+
+This report will help in assessing trip volume, pricing efficiency, and each city's contribution to the overall trip count
 
 
 ```sql
@@ -111,8 +113,9 @@ ORDER BY total_trips DESC;
 **### Business Request - 2: Monthly City-Level Trips Target Performance Report**
 
 **Objective:** Generate a report that evaluates the target performance for trips at the monthly and city level. For each city and month, compare the actual total trips with the target trips and categorise the performance as follows:
-e If actual trips are greater than target trips, mark it as "Above Target".
+    If actual trips are greater than target trips, mark it as "Above Target".
  	If actual trips are less than or equal to target trips, mark it as "Below Target".
+
 Additionally, calculate the % difference between actual and target trips to quantify the performance gap.
 
 
@@ -158,6 +161,7 @@ ORDER BY cm.city_name, cm.month;
 **Objective:** 
 Generate a report that shows the percentage distribution of repeat passengers by the number of trips they have taken in each city. Calculate the percentage of repeat passengers who took 2 trips, 3 trips, and so on, up to 10 trips.
 Each column should represent a trip count category, displaying the percentage of repeat passengers who fall into that category out of the total repeat passengers for that city.
+
 This report will help identify cities with high repeat trip frequency, which can indicate strong customer loyalty or frequent usage patterns.
 
 
@@ -208,7 +212,8 @@ GROUP BY t.city_name;
 ### Business Request - 4: Identify Cities with Highest and Lowest Total New Passengers
 
 **Objective:** 
-Generate a report that calculates the total new passengers for each city and ranks them based on this value. Identify the top 3 cities with the highest number of new passengers as well as the bottom 3 cities with the lowest number of new passengers, categorising them as "Top 3" or "Bottom 3" accordingly.
+Generate a report that calculates the total new passengers for each city and ranks them based on this value. 
+Identify the top 3 cities with the highest number of new passengers as well as the bottom 3 cities with the lowest number of new passengers, categorising them as "Top 3" or "Bottom 3" accordingly.
 
 ```sql
 WITH city_level AS (
