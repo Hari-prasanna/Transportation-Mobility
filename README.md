@@ -22,7 +22,7 @@ The data for this project is sourced from the Kaggle dataset:
 
 ```sql
 CREATE TABLE fact_trips (
-    trip_id VARCHAR(25) PRIMARY KEY, 
+    trip_id VARCHAR(25), 
     trip_date DATE,
     city_id VARCHAR (10), 
     passenger_type VARCHAR(20),
@@ -36,26 +36,26 @@ CREATE TABLE fact_trips (
 -- Table: dim_repeat_trip_distribution
 CREATE TABLE dim_repeat_trip_distribution (
     month DATE,
-    city_id VARCHAR(10) PRIMARY KEY,
+    city_id VARCHAR(10),
     trip_count INT,
     repeat_passenger_count INT
 );
 
 -- Table: city_target_passenger_rating
 CREATE TABLE city_target_passenger_rating (
-    city_id VARCHAR(10) PRIMARY KEY,
+    city_id VARCHAR(10),
     target_avg_passenger_rating NUMERIC
 );
 
 -- Table: dim_city
 CREATE TABLE dim_city (
-    city_id VARCHAR(10) PRIMARY KEY,
+    city_id VARCHAR(10),
     city_name VARCHAR(20)
 );
 
 -- Table: dim_date
 CREATE TABLE dim_date (
-    date DATE PRIMARY KEY,
+    date DATE,
     start_of_month DATE,
     month_name VARCHAR(20),
     day_type VARCHAR(20)
@@ -64,7 +64,7 @@ CREATE TABLE dim_date (
 -- Table: fact_passenger_summary
 CREATE TABLE fact_passenger_summary (
     month DATE,
-    city_id VARCHAR(10) PRIMARY KEY,
+    city_id VARCHAR(10),
     new_passengers INT,
     repeat_passengers INT,
     total_passengers INT
@@ -73,14 +73,14 @@ CREATE TABLE fact_passenger_summary (
 -- Table: monthly_target_new_passengers
 CREATE TABLE monthly_target_new_passengers (
     month DATE,
-    city_id VARCHAR(10) PRIMARY KEY,
+    city_id VARCHAR(10),
     target_new_passengers INT
 );
 
 -- Table: monthly_target_trips
 CREATE TABLE monthly_target_trips (
     month DATE,
-    city_id VARCHAR(10) PRIMARY KEY,
+    city_id VARCHAR(10),
     total_target_trips INT
 );
 
@@ -283,6 +283,7 @@ Business Request - 6: Repeat Passenger Rate Analysis
 Generate a report that calculates two metrics:
 1.	Monthly Repeat Passenger Rate: Calculate the repeat passenger rate for each city and month by comparing the number of repeat passengers to the total passengers.
 2.	City-wide Repeat Passenger Rate: Calculate the overall repeat passenger rate for each city, considering all passengers across months.
+   
 These metrics will provide insights into monthly repeat trends as well as the overall repeat behaviour for each city.
 
 
