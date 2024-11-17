@@ -21,15 +21,16 @@ The data for this project is sourced from the Kaggle dataset:
 ## Schema
 
 ```sql
+-- Table: fact_trips 
 CREATE TABLE fact_trips (
     trip_id VARCHAR(25), 
     trip_date DATE,
     city_id VARCHAR (10), 
     passenger_type VARCHAR(20),
     distance_travelled_km NUMERIC,
-    fare_amount NUMERIC,
-    passenger_rating NUMERIC,
-    driver_rating NUMERIC
+    fare_amount INT,
+    passenger_rating INT,
+    driver_rating INT
 );
 
 
