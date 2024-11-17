@@ -89,42 +89,63 @@ CREATE TABLE monthly_target_trips (
 
 ## Business Problems and Solutions
 
-### 1. Count the Number of Movies vs TV Shows
+**Objective:** Generate a report that displays the total trips, average fare per km, average fare per trip, and the percentage contribution of each city's trips to the overall trips. This report will help in assessing trip volume, pricing efficiency, and each city's contribution to the overall trip count
+
+### 1. City-Level Fare and Trip Summary Report
 
 ```sql
-SELECT 
-    type,
-    COUNT(*)
-FROM netflix
-GROUP BY 1;
+SELECT
+    dc.city_name AS city_name,
+    COUNT(*) AS total_trips,
+    ROUND(SUM(fare_amount) / NULLIF(SUM(distance_travelled_km), 0), 2) AS avg_fare_per_km,
+    ROUND(AVG(ft.fare_amount), 0) AS avg_fare_per_trip,
+    ROUND(COUNT(*)::NUMERIC / (SELECT COUNT(*) FROM fact_trips)::NUMERIC * 100, 2) AS percentage_contribution_to_total_trips
+FROM fact_trips AS ft
+JOIN dim_city AS dc
+     ON ft.city_id = dc.city_id
+GROUP BY dc.city_name
+ORDER BY total_trips DESC;
 ```
 
-**Objective:** Determine the distribution of content types on Netflix.
+**Objective:** Generate a report that evaluates the target performance for trips at the monthly and city level. For each city and month, compare the actual total trips with the target trips and categorise the performance as follows:
+e If actual trips are greater than target trips, mark it as "Above Target".
+ 	If actual trips are less than or equal to target trips, mark it as "Below Target".
+Additionally, calculate the % difference between actual and target trips to quantify the performance gap.
 
-### 2. Find the Most Common Rating for Movies and TV Shows
+
+### Business Request - 2: Monthly City-Level Trips Target Performance Report
 
 ```sql
-WITH RatingCounts AS (
-    SELECT 
-        type,
-        rating,
-        COUNT(*) AS rating_count
-    FROM netflix
-    GROUP BY type, rating
-),
-RankedRatings AS (
-    SELECT 
-        type,
-        rating,
-        rating_count,
-        RANK() OVER (PARTITION BY type ORDER BY rating_count DESC) AS rank
-    FROM RatingCounts
+WITH city_month AS (
+    SELECT
+        DATE_TRUNC('month', trip_date) AS month,
+        ft.city_id,
+        dc.city_name,
+        COUNT(*) AS actual_trips
+    FROM fact_trips AS ft
+    JOIN dim_city AS dc
+         ON ft.city_id = dc.city_id
+    GROUP BY 1, 2, 3
 )
 SELECT 
-    type,
-    rating AS most_frequent_rating
-FROM RankedRatings
-WHERE rank = 1;
+    cm.city_name,
+    TO_CHAR(cm.month, 'Month') AS month_name,
+    SUM(cm.actual_trips) AS actual_trips,
+    SUM(mt.total_target_trips) AS target_trips,
+    CASE
+        WHEN SUM(cm.actual_trips) > SUM(mt.total_target_trips) THEN 'Above Target'
+        ELSE 'Below Target'
+    END AS performance_status,
+    ROUND(
+        (SUM(cm.actual_trips) - SUM(mt.total_target_trips)) / NULLIF(SUM(mt.total_target_trips), 0) * 100,
+        2
+    ) AS percentage_difference
+FROM city_month AS cm
+JOIN monthly_target_trips AS mt 
+     ON cm.city_id = mt.city_id
+    AND cm.month = mt.month
+GROUP BY cm.city_name, cm.month
+ORDER BY cm.city_name, cm.month;
 ```
 
 **Objective:** User Interest and Trends Analysis
