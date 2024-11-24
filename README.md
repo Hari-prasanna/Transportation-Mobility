@@ -12,11 +12,6 @@ However, the Chief of Operations, Bruce Haryali, wanted this immediately but the
 
 Check “ad-hoc-requests.pdf” - this document includes important business questions, requiring SQL-based report generation. 
 
-## Dataset
-
-The data for this project is sourced from the Kaggle dataset:
-
-- **Dataset Link:** [Movies Dataset](https://www.kaggle.com/datasets/shivamb/netflix-shows?resource=download)
 
 ## Schema
 
